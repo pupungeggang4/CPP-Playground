@@ -73,7 +73,6 @@ luac.out
 *.hex
 
 /glad
-/glades
 *.swp
 *.png~
 .DS_Store
