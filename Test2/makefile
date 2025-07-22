@@ -1,4 +1,5 @@
 linux:
-	clang++ main.cpp -o main
+	clang++ main.cpp script/*.cpp -o main
 
 dummy:
+	
