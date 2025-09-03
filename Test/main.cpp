@@ -4,7 +4,8 @@
 #else
 #include <SDL.h>
 #endif
-#include <glad/glad.h>
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
 
 const char* vertexShaderSource = R"(#version 330 core
     in vec4 a_position;
@@ -69,6 +70,13 @@ SDL_Window *window;
 SDL_GLContext context;
 float scale;
 
+void cbWindowSizeChange(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glfwSwapBuffers(window);
+}
+
 int main(int argc, char *argv[]) {
     // Data
     float vertices[18] = {
@@ -77,19 +85,25 @@ int main(int argc, char *argv[]) {
         0.433, -0.25, 0.0, 0.0, 0.0, 1.0
     };
 
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+    GLFWwindow *window = glfwCreateWindow(800, 600, "3D Game", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);
+    glfwSetFramebufferSizeCallback(window, cbWindowSizeChange);
+
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    window = SDL_CreateWindow("Triangle Example", 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-    #ifndef __APPLE__
-    scale = SDL_GetWindowDisplayScale(window);
-    #else
-    scale = 1;
-    #endif
-    SDL_SetWindowSize(window, 800 * scale, 600 * scale);
-    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-    context = SDL_GL_CreateContext(window);
-    //gladLoadGL();
-    gladLoadGLES2Loader((GLADloadproc) SDL_GL_GetProcAddress);
+
+    gladLoadGL(glfwGetProcAddress);
+    GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+    float xscale, yscale;
+    glfwGetMonitorContentScale(monitor, &xscale, &yscale);
+    glViewport(0, 0, int(800 * xscale), int(600 * yscale));
+
     std::cout << glGetString(GL_VERSION) << std::endl;
 
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -105,9 +119,9 @@ int main(int argc, char *argv[]) {
 
     // Var
     float m[16] = {
-        0.5, 0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0, 0.0,
         0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 0.5, 0.0,
+        0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0
     };
 
@@ -128,22 +142,9 @@ int main(int argc, char *argv[]) {
     glVertexAttribPointer(laColor, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(laColor);
 
-    while (running) {
-        frameCurrent = SDL_GetTicks();
-        frameNext = frameCurrent + 16;
+    while (!glfwWindowShouldClose(window)) {
         delta = 16;
         rz += delta / 1000.0;
-        
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) {
-                running = false;
-            }
-
-            if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
-                std::cout << "(" << event.button.x / scale << ", " << event.button.y / scale << ")" <<  std::endl;
-            }
-        }
 
         glClearColor(0.0, 0.0, 0.0, 1.0);
         glEnable(GL_DEPTH_TEST);
@@ -156,12 +157,8 @@ int main(int argc, char *argv[]) {
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         //std::cout << SDL_GetTicks() - frameCurrent << std::endl;
-        SDL_GL_SwapWindow(window);
-        
-        frameCurrent = SDL_GetTicks();
-        if (frameCurrent < frameNext) {
-            SDL_Delay(frameNext - frameCurrent);
-        }
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     return 0;
